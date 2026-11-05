@@ -47,6 +47,11 @@ export const MEMOS_MEMORY_TOOL_SPECS: ToolSpec[] = [
     readOnly: true,
     execute: async (client, params, runtime, sessionKey) => {
       const body = withSearchRuntimeDefaults(params, runtime, sessionKey);
+      const allowedLayers = runtime.memoryRetrievalLayers?.();
+      if (allowedLayers) {
+        body.layers = allowedLayers.filter((layer) => !Array.isArray(body.layers) || body.layers.includes(layer));
+        if (body.layers.length === 0) return { hits: [] };
+      }
       return client.search(body);
     },
   },
@@ -57,7 +62,19 @@ export const MEMOS_MEMORY_TOOL_SPECS: ToolSpec[] = [
       id: { type: "string" },
     }, ["id"]),
     readOnly: true,
-    execute: async (client, params) => client.getMemory(String(params.id)),
+    execute: async (client, params, runtime) => {
+      const id = String(params.id);
+      const allowedLayers = runtime.memoryRetrievalLayers?.();
+      // Episode details aggregate all layers. Restricted runs use individual trace ids.
+      if (allowedLayers && allowedLayers.length < 4 && id.startsWith("episode_")) {
+        throw new Error("Episode aggregates are unavailable with restricted memory layers. Read individual trace ids.");
+      }
+      const result = await client.getMemory(id);
+      if (allowedLayers && allowedLayers.length < 4 && !allowedLayers.includes(result.memoryLayer ?? result.layer ?? result.item?.memoryLayer)) {
+        throw new Error("This memory layer is disabled for this run.");
+      }
+      return result;
+    },
   },
 ];
 

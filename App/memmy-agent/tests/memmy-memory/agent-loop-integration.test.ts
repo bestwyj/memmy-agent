@@ -2,6 +2,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+// Keep configurable integration fixtures independent of the fixed branch profile.
+vi.mock("../../src/memmy-memory/ablation.js", () => ({ MEMORY_ABLATION: {} }));
 import { AgentLoop } from "../../src/core/agent-runtime/loop.js";
 import { Config } from "../../src/config/schema.js";
 import { InboundMessage } from "../../src/core/runtime-messages/events.js";

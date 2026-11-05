@@ -91,7 +91,7 @@ export type MemmyMemoryHookOptions = {
   profileId?: string;
   profileLabel?: string;
   userId?: string;
-  /** Optional per-run upper bound on layers eligible for automatic turn-start retrieval. */
+  /** Optional per-run upper bound for recall, memory tools, and L3 prompt injection. */
   retrievalLayers?: MemmyMemoryLayer[];
   /** Optional override for GA4 client_id; defaults to reading desktop-written ~/.memmy/analytics-client-id. */
   getAnalyticsClientId?: () => string | null | undefined;
@@ -116,6 +116,7 @@ export type MemmyMemoryTurnState = {
 };
 
 export type MemmyMemoryToolRuntime = {
+  memoryRetrievalLayers?(): MemmyMemoryLayer[] | undefined;
   requestEnvelope(sessionKey?: string | null): MemmyMemoryRequestEnvelope;
   currentSessionId(sessionKey?: string | null): string | null;
   currentEpisodeId(sessionKey?: string | null): string | null;
