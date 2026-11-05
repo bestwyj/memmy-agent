@@ -2,6 +2,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+// These replay fixtures explicitly toggle memory. Profile enforcement has its own test.
+vi.mock("../../src/memmy-memory/ablation.js", () => ({ MEMORY_ABLATION: {} }));
 import { Config } from "../../src/config/schema.js";
 import { AgentLoop } from "../../src/core/agent-runtime/loop.js";
 import { AgentHookContext } from "../../src/core/agent-runtime/hook.js";
