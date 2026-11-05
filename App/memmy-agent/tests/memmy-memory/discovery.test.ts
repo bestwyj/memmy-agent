@@ -1,10 +1,13 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { Config } from "../../src/config/schema.js";
 import { discoverMemmyMemoryConnection, discoverMemmyOutputLanguage, memmyMemoryConfigPaths } from "../../src/memmy-memory/discovery.js";
 import { resolveMemmyMemoryConfig } from "../../src/memmy-memory/config.js";
+
+// Exercise runtime config parsing independently of the branch's fixed evaluation profile.
+vi.mock("../../src/memmy-memory/ablation.js", () => ({ MEMORY_ABLATION: {} }));
 
 const roots: string[] = [];
 

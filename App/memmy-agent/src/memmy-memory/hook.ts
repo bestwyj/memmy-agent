@@ -149,6 +149,10 @@ export class MemmyMemoryHook extends AgentHook implements MemmyMemoryToolRuntime
     registerMemmyMemoryTools(ctx.registry, this.client, this);
   }
 
+  memoryRetrievalLayers() {
+    return this.options.retrievalLayers ?? undefined;
+  }
+
   override onBuildSystemPrompt(ctx: SystemPromptBuildContext): void {
     ctx.upsertSection({
       id: "memmy-memory-context-protocol",
@@ -157,7 +161,7 @@ export class MemmyMemoryHook extends AgentHook implements MemmyMemoryToolRuntime
     }, { after: "tool-contract" });
     const sessionKey = ctx.sessionKey;
     const cached = sessionKey ? this.sessionStateBySessionKey.get(sessionKey)?.l3Cache : null;
-    if (!cached?.renderedContext.trim()) {
+    if ((this.options.retrievalLayers && !this.options.retrievalLayers.includes("L3")) || !cached?.renderedContext.trim()) {
       ctx.removeSection("memmy-l3-world-model");
       return;
     }
@@ -775,6 +779,7 @@ export class MemmyMemoryHook extends AgentHook implements MemmyMemoryToolRuntime
   }
 
   private async loadL3Context(sessionKey: string, state: MemmyMemorySessionState, turn: InteractiveTurn, signal: AbortSignal): Promise<void> {
+    if (this.options.retrievalLayers && !this.options.retrievalLayers.includes("L3")) return;
     const response = await this.client.l3WorldModelContext(
       state.memorySessionId,
       this.l3Envelope(sessionKey, state),

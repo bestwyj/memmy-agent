@@ -1894,7 +1894,8 @@ export class RetrievalService {
     if (episode) {
       this.deps.assertEpisodeInScope(episode, request.namespace);
     }
-    const onboardingFirstReportSearchHit = isOnboardingFirstReportContinuationQuery(request.query)
+    const onboardingFirstReportSearchHit = (request.layers === undefined || request.layers.includes("L1"))
+      && isOnboardingFirstReportContinuationQuery(request.query)
       ? this.deps.repos.memories.search("", {
           userId: context.userId,
           agentId: ONBOARDING_FIRST_REPORT_AGENT_ID,

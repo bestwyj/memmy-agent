@@ -134,6 +134,14 @@ describe("MemoryService / retrieval / injected context", () => {
       expect(searchOutput.candidates?.[0]?.content).toContain("FINAL_NEXT_STEP_MARKER");
       expect(searchOutput.candidates?.[0]?.content).not.toContain("...[truncated]");
     }
+    const skillOnlyRecall = await service.search({
+      sessionId: session.sessionId,
+      query: "Please continue from the first report I just had in Memmy.",
+      layers: ["Skill"],
+      includeInjectedContext: true
+    });
+    expect(skillOnlyRecall.hits).toEqual([]);
+    expect(skillOnlyRecall.injectedContext.markdown).not.toContain("FINAL_NEXT_STEP_MARKER");
     expect(oldReport.id).not.toBe(latestReport.id);
     db.close();
   });

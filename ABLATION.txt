@@ -1,0 +1,60 @@
+Memmy v1.2.7 agent-visible memory ablation
+
+Base commit 043bac4ece4a148e2f163bb62d2376e22f9dde36
+Fork https://github.com/bestwyj/memmy-agent
+
+Branches and visible memory layers
+  ablation/agent-only       Skill
+  ablation/agent-l1         L1, Skill
+  ablation/agent-l1-l3      L1, L3, Skill
+  ablation/agent-l1-l2-l3   L1, L2, L3, Skill
+
+All four groups retain Skill, including agent-only, as requested.
+Capture, storage, evolution and background workers continue running.
+The fixed branch profile overrides memmyMemory.enabled and retrievalLayers
+from existing runtime config. Other model/provider settings come from the
+normal runtime configuration. File memory defaults to disabled upstream.
+
+The only difference between these branches is
+  App/memmy-agent/src/memmy-memory/ablation.ts
+
+Shared changes enforce the existing retrievalLayers setting in automatic
+recall, L3 system-prompt injection, memory search and memory detail tools.
+The first-report L1 shortcut also respects the requested layers.
+Restricted groups reject episode_ aggregate reads because those aggregate
+all layers. Individual trace/skill/world/policy reads remain available for
+the enabled layers. The full group retains episode aggregate reads.
+
+Deployment
+Build both Agent and Memory from the selected branch. The Memory change is
+needed for the Skill-only group's first-report shortcut. Point the Agent at
+that Memory service using MEMMY_MEMORY_URL and its normal token settings.
+Use the evaluation team's usual model credentials and service configuration.
+
+Source build commands, run from repository root
+  npm ci
+  npm --prefix App/memmy-agent ci
+  npm run build -w @memmy/migrations
+  npm run build -w @memmy/knowledge
+  npm run build -w @memmy/local-api-contracts
+  npm run memory:build
+  cd App/memmy-agent
+  npx tsc -p tsconfig.build.json
+  node scripts/copy-build-assets.mjs
+  cd ../..
+
+Windows asset packaging requires Go 1.22+ for the upstream History recorder.
+For Memory, the source-built server entry is Memory/dist/src/server/index.js.
+For Agent, the source-built CLI entry is App/memmy-agent/dist/main.js.
+Switching source branches requires rebuilding before the next evaluation.
+
+Evaluation isolation
+Use separate runtime config, workspace, session history and database copies
+for each group, seeded from the same initial snapshot. Keep model, prompt,
+task set and inference parameters equal. Keep fileMemory.enabled=false as
+in the upstream default. These profiles apply to the built-in Memmy Agent
+integration. External agent adapters retain their own configuration.
+
+Verification commands
+  npx vitest run App/memmy-agent/tests/memmy-memory/hook.test.ts App/memmy-agent/tests/memmy-memory/client-tools.test.ts App/memmy-agent/tests/memmy-memory/discovery.test.ts App/memmy-agent/tests/memmy-memory/ablation.test.ts --maxWorkers=2 --silent=true
+  npx vitest run Memory/tests/service/retrieval/injected-context.test.ts --maxWorkers=1 --silent=true

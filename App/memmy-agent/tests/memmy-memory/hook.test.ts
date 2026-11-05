@@ -76,6 +76,27 @@ function fakeV2Client() {
 }
 
 describe("MemmyMemoryHook", () => {
+  it.each([
+    { layers: ["Skill"] as const, readsL3: false },
+    { layers: ["L1", "Skill"] as const, readsL3: false },
+    { layers: ["L1", "L3", "Skill"] as const, readsL3: true },
+    { layers: ["L1", "L2", "L3", "Skill"] as const, readsL3: true },
+  ])("restricts L3 prompt injection for $layers", async ({ layers, readsL3 }) => {
+    const client = fakeV2Client();
+    const hook = new MemmyMemoryHook(client as any, { retrievalLayers: [...layers] });
+    const ctx = new AgentHookContext({ sessionKey: "cli:ablation" });
+    try {
+      await hook.beforeBuildSystemPrompt(ctx);
+      const prompt = new SystemPromptBuildContext({ sessionKey: "cli:ablation" });
+      hook.onBuildSystemPrompt(prompt);
+      expect(client.l3WorldModelContext).toHaveBeenCalledTimes(readsL3 ? 1 : 0);
+      expect(Boolean(prompt.getSection("memmy-l3-world-model"))).toBe(readsL3);
+      expect(hook.memoryRetrievalLayers()).toEqual(layers);
+    } finally {
+      await hook.dispose();
+    }
+  });
+
   it("opens a v2 Session at sessionStart and reads L3 once before every prompt build", async () => {
     const client = fakeV2Client();
     const workspace = mkdtempSync(join(tmpdir(), "memmy-v2-hook-"));

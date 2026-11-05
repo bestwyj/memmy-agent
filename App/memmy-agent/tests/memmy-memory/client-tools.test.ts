@@ -49,6 +49,35 @@ function validHealth(
 }
 
 describe("MemmyMemoryClient", () => {
+  it("bounds explicit and implicit tool searches and blocks excluded memory details", async () => {
+    const client = {
+      search: vi.fn(async () => ({ hits: [] })),
+      getMemory: vi.fn(async () => ({ id: "policy_1", memoryLayer: "L2", body: "excluded policy" })),
+    };
+    const runtime: MemmyMemoryToolRuntime = {
+      requestEnvelope: () => ({}),
+      currentSessionId: () => null,
+      currentEpisodeId: () => null,
+      currentTurnId: () => "test-turn",
+      currentUserText: () => "test query",
+      memoryRetrievalLayers: () => ["L1", "Skill"],
+    };
+    const registry = new ToolRegistry();
+    registerMemmyMemoryTools(registry, client as any, runtime);
+    const search = registry.get("memmy_memory_search")!;
+    await search.execute({ query: "test" });
+    expect(client.search).toHaveBeenLastCalledWith(expect.objectContaining({ layers: ["L1", "Skill"] }));
+    await search.execute({ query: "test", layers: ["L1", "L2", "L3"] });
+    expect(client.search).toHaveBeenLastCalledWith(expect.objectContaining({ layers: ["L1"] }));
+    await search.execute({ query: "test", layers: ["L2"] });
+    await search.execute({ query: "test", layers: [] });
+    expect(client.search).toHaveBeenCalledTimes(2);
+    const get = registry.get("memmy_memory_get")!;
+    expect(await get.execute({ id: "policy_1" })).toContain("disabled");
+    expect(await get.execute({ id: "episode_1" })).toContain("individual trace ids");
+    expect(client.getMemory).toHaveBeenCalledTimes(1);
+  });
+
   it("uses a 60s default request timeout", () => {
     const client = new MemmyMemoryClient({ baseUrl: "http://memory.test" });
 
